@@ -1,57 +1,15 @@
-const { nanoid } = require('nanoid');
+const pool = require('./database');
 const books = require('./books');
 
-const addBookModule = (request, h) => {
-    const { 
-        name, year, author, summary, publisher, 
-        pageCount, readPage, reading
-    } = request.payload;
-
-    const id = nanoid(16);
-    const insertedAt = new Date().toISOString();
-    const updatedAt = insertedAt;
-    let finished = false;
-
-    const newBook = {
-        id, name, year, author, summary, publisher, 
-        pageCount, readPage, finished, reading,
-        insertedAt, updatedAt,
-    };
-
-    const isBookEmpty = !name || name.trim() === '';
-
-    if (newBook.readPage === newBook.pageCount)
-    {
-        newBook.finished = true;
+const queryTable = async (request, h) => {
+    try {
+      const [rows] = await pool.query('SHOW tables;');
+      return h.response(rows).code(200);
+    } catch (error) {
+      console.error(error);
+      return h.response({ error: 'Failed to fetch users' }).code(500);
     }
-    if (isBookEmpty){
-        const response = h.response({
-            'status': 'fail',
-            'message': 'Gagal menambahkan buku. Mohon isi nama buku'
-        });
-        response.code(400);
-        return response;
-    }
-    if (newBook.readPage > newBook.pageCount)
-    {
-        const response = h.response({
-            'status': 'fail',
-            'message': 'Gagal menambahkan buku. readPage tidak boleh lebih besar dari pageCount'
-        });
-        response.code(400);
-        return response;    
-    }
-    const response = h.response({
-        status: 'success',
-        message: 'Buku berhasil ditambahkan',
-        data: {
-            bookId: id,
-        },
-    });
-    response.code(201);
-    books.push(newBook);
-    return response;
-};
+  };
 
 const getAllBooksModule = (request, h) => {
     const { name, reading, finished } = request.query;
@@ -190,7 +148,7 @@ const deleteBookByIdModule = (request, h) => {
 };
 
 module.exports = { 
-    addBookModule, 
+    queryTable, 
     getAllBooksModule, 
     getBookByIdModule, 
     editBookByIdModule,

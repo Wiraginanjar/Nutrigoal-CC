@@ -1,5 +1,5 @@
 const { 
-  addBookModule, 
+  queryTable, 
   getAllBooksModule, 
   getBookByIdModule, 
   editBookByIdModule,
@@ -8,9 +8,9 @@ const {
 
 const routes = [
   {
-    method: 'POST',
-    path: '/books',
-    handler: addBookModule,
+    method: 'GET',
+    path: '/query',
+    handler: queryTable,
   },
   {
     method: 'GET',
