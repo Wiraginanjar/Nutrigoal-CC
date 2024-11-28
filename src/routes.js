@@ -4,6 +4,8 @@ const {
   getBookByIdModule, 
   editBookByIdModule,
   deleteBookByIdModule,
+  registerUser,
+  loginUser,
 } = require('./handler');
 
 const routes = [
@@ -11,6 +13,16 @@ const routes = [
     method: 'GET',
     path: '/query',
     handler: queryTable,
+  },
+  {
+    method: 'POST',
+    path: '/register',
+    handler: registerUser,
+  },
+  {
+    method: 'POST',
+    path: '/login',
+    handler: loginUser,
   },
   {
     method: 'GET',

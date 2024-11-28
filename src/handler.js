@@ -1,15 +1,89 @@
 const pool = require('./database');
-const books = require('./books');
+const inputs = require('./inputs');
+const bcrypt = require('bcrypt');
 
 const queryTable = async (request, h) => {
     try {
-      const [rows] = await pool.query('SHOW tables;');
-      return h.response(rows).code(200);
+        const [rows] = await pool.query('SHOW tables;');
+        return h.response(rows).code(200);
     } catch (error) {
-      console.error(error);
-      return h.response({ error: 'Failed to fetch users' }).code(500);
+        console.error(error);
+        return h.response({ error: 'Failed to fetch users' }).code(500);
     }
-  };
+};
+
+const registerUser = async (request, h) => {
+    const { name, email, password } = request.payload;
+
+    // Validasi input
+    if (!name || !email || !password) {
+        return h.response({ error: 'Please fill all the form' }).code(400);
+    }
+
+    try {
+        // Hash password sebelum disimpan
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Simpan user baru ke database
+        await pool.query(
+            'INSERT INTO user (name, email, password) VALUES (?, ?, ?);',
+            [name, email, hashedPassword]
+        );
+
+        // Respons sukses
+        return h.response({ message: 'User registered successfully!' }).code(201);
+    } catch (error) {
+        console.error(error);
+
+        // Penanganan error jika email sudah terdaftar
+        if (error.code === 'ER_DUP_ENTRY') {
+            return h.response({ error: 'Email already exists' }).code(409);
+        }
+
+        // Penanganan error umum
+        return h.response({ error: 'Failed to register user' }).code(500);
+    }
+};
+
+const loginUser = async (request, h) => {
+    const { email, password } = request.payload;
+
+    // Validasi input
+    if (!email || !password) {
+        return h.response({ error: 'Please provide email and password' }).code(400);
+    }
+
+    try {
+        // Query untuk mencari user berdasarkan email
+        const [rows] = await pool.query('SELECT * FROM user WHERE email = ?;', [email]);
+
+        // Jika user tidak ditemukan
+        if (rows.length === 0) {
+            return h.response({ error: 'Invalid email or password' }).code(401); // Unauthorized
+        }
+
+        const user = rows[0];
+
+        // Verifikasi password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return h.response({ error: 'Invalid email or password' }).code(401); // Unauthorized
+        }
+
+        // Jika login berhasil
+        return h.response({
+            message: 'Login successful!',
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            },
+        }).code(200);
+    } catch (error) {
+        console.error(error);
+        return h.response({ error: 'Failed to login user' }).code(500);
+    }
+};
 
 const getAllBooksModule = (request, h) => {
     const { name, reading, finished } = request.query;
@@ -153,4 +227,6 @@ module.exports = {
     getBookByIdModule, 
     editBookByIdModule,
     deleteBookByIdModule,
+    registerUser,
+    loginUser,
 };
