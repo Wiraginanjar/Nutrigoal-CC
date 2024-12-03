@@ -12,6 +12,7 @@ const queryTable = async (request, h) => {
     }
 };
 
+
 const registerUser = async (request, h) => {
     const { name, email, password } = request.payload;
 
@@ -25,10 +26,7 @@ const registerUser = async (request, h) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Simpan user baru ke database
-        await pool.query(
-            'INSERT INTO user (name, email, password) VALUES (?, ?, ?);',
-            [name, email, hashedPassword]
-        );
+        await pool.execute('INSERT INTO users_public (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
 
         // Respons sukses
         return h.response({ message: 'User registered successfully!' }).code(201);
