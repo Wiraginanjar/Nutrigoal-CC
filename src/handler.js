@@ -25,10 +25,7 @@ const registerUser = async (request, h) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Simpan user baru ke database
-        await pool.query(
-            'INSERT INTO user (name, email, password) VALUES (?, ?, ?);',
-            [name, email, hashedPassword]
-        );
+        await pool.execute('INSERT INTO users_public (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
 
         // Respons sukses
         return h.response({ message: 'User registered successfully!' }).code(201);
@@ -82,6 +79,59 @@ const loginUser = async (request, h) => {
     } catch (error) {
         console.error(error);
         return h.response({ error: 'Failed to login user' }).code(500);
+    }
+};
+
+const updateUser = async (request, h) => {
+    const { id } = request.params;
+    const { email, gender, name, dateOfBirth } = request.payload;
+
+    // Validasi input
+    if (!id || (!email && !gender && !name && !dateOfBirth)) {
+        return h.response({ error: 'Provide at least one field to update' }).code(400);
+    }
+
+    try {
+        // Array untuk menyimpan bagian query dan nilai parameter
+        const updates = [];
+        const values = [];
+
+        // Tambahkan field yang ingin di-update ke query
+        if (email) {
+            updates.push('email = ?');
+            values.push(email);
+        }
+        if (gender) {
+            updates.push('gender = ?');
+            values.push(gender);
+        }
+        if (name) {
+            updates.push('name = ?');
+            values.push(name);
+        }
+        if (dateOfBirth) {
+            updates.push('dateOfBirth = ?');
+            values.push(dateOfBirth);
+        }
+
+        // Tambahkan ID user ke parameter
+        values.push(id);
+
+        // Bangun query SQL
+        const query = `UPDATE user SET ${updates.join(', ')} WHERE id = ?;`;
+
+        // Eksekusi query dengan pool.execute
+        const [result] = await pool.execute(query, values);
+
+        // Periksa apakah ada baris yang diperbarui
+        if (result.affectedRows === 0) {
+            return h.response({ error: 'User not found or no changes made' }).code(404);
+        }
+
+        return h.response({ message: 'User updated successfully!' }).code(200);
+    } catch (error) {
+        console.error(error);
+        return h.response({ error: 'Failed to update user' }).code(500);
     }
 };
 
@@ -229,4 +279,5 @@ module.exports = {
     deleteBookByIdModule,
     registerUser,
     loginUser,
+    updateUser,
 };
