@@ -6,6 +6,7 @@ const {
   deleteBookByIdModule,
   registerUser,
   loginUser,
+  updateUser,
 } = require('./handler');
 
 const routes = [
@@ -23,6 +24,11 @@ const routes = [
     method: 'POST',
     path: '/login',
     handler: loginUser,
+  },
+  {
+    method: 'PUT',
+    path: '/user/{id}',
+    handler: updateUser,
   },
   {
     method: 'GET',
