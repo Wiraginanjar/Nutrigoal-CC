@@ -155,7 +155,7 @@ const proxyPredict = async (request, h) => {
         await pool.query('INSERT INTO favorite_food_preference (ffp_id, ffn_id, ffp_name) VALUES (?, ?, ?)', [ffp_id_val, ffn_id_val, ffp_name_val]);
 
         //let rfboc_col = Object.keys(data.recommended_food_based_on_calories).join(", ").replaceAll("(", "").replaceAll(")", "");
-        let rfboc_val = Object.values(data.recommended_food_based_on_calories).filter((_, index) => index !== 10);
+        let rfboc_val = Object.values(data.recommended_food_based_on_calories).filter((_, index) => index !== 10); // ignore rfboc_id because auto increment (not unique)
         await pool.query(
             `INSERT INTO recommended_food_based_on_calories 
              (
