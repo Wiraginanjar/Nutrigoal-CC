@@ -7,6 +7,7 @@ const {
   registerUser,
   loginUser,
   updateUser,
+  proxyPredict,
 } = require('./handler');
 
 const routes = [
@@ -29,6 +30,11 @@ const routes = [
     method: 'PUT',
     path: '/user/{id}',
     handler: updateUser,
+  },
+  {
+    method: 'POST',
+    path: '/proxy-predict',
+    handler: proxyPredict,
   },
   {
     method: 'GET',
