@@ -1,21 +1,11 @@
 const { 
-  queryTable, 
-  getAllBooksModule, 
-  getBookByIdModule, 
-  editBookByIdModule,
-  deleteBookByIdModule,
   registerUser,
   loginUser,
   updateUser,
-  proxyPredict,
+  predict,
 } = require('./handler');
 
 const routes = [
-  {
-    method: 'GET',
-    path: '/query',
-    handler: queryTable,
-  },
   {
     method: 'POST',
     path: '/register',
@@ -33,28 +23,8 @@ const routes = [
   },
   {
     method: 'POST',
-    path: '/proxy-predict',
-    handler: proxyPredict,
-  },
-  {
-    method: 'GET',
-    path: '/books',
-    handler: getAllBooksModule,
-  },
-  {
-    method: 'GET',
-    path: '/books/{id}',
-    handler: getBookByIdModule,
-  },
-  {
-    method: 'PUT',
-    path: '/books/{id}',
-    handler: editBookByIdModule,
-  },
-  {
-    method: 'DELETE',
-    path: '/books/{id}',
-    handler: deleteBookByIdModule,
+    path: '/predict',
+    handler: predict,
   },
 ];
   

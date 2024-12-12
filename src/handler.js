@@ -1,17 +1,6 @@
 const pool = require('./database');
-const inputs = require('./inputs');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
-
-const queryTable = async (request, h) => {
-    try {
-        const [rows] = await pool.query('SHOW tables;');
-        return h.response(rows).code(200);
-    } catch (error) {
-        console.error(error);
-        return h.response({ error: 'Failed to fetch users' }).code(500);
-    }
-};
 
 const registerUser = async (request, h) => {
     const { name, email, password } = request.payload;
@@ -136,7 +125,7 @@ const updateUser = async (request, h) => {
     }
 };
 
-const proxyPredict = async (request, h) => {
+const predict = async (request, h) => {
     const body = request.payload; // Mengambil body request yang dikirimkan ke server Hapi.js
 
     try {
@@ -147,7 +136,8 @@ const proxyPredict = async (request, h) => {
         let data = response.data;
         
         let ffn_name_val = JSON.stringify(data.favorite_food_name.ffn_name);
-        await pool.query('INSERT INTO favorite_food_name (ffn_name) VALUES (?)', [ffn_name_val]);
+        let ffns_id_val = JSON.stringify(data.favorite_food_name.ffn_id);
+        await pool.query('INSERT INTO favorite_food_name (ffn_id, ffn_name) VALUES (?,?)', [ffns_id_val, ffn_name_val]);
 
         let ffp_id_val = JSON.stringify(data.favorite_food_preference.ffp_id);
         let ffn_id_val = JSON.stringify(data.favorite_food_preference.ffn_id);
@@ -155,13 +145,13 @@ const proxyPredict = async (request, h) => {
         await pool.query('INSERT INTO favorite_food_preference (ffp_id, ffn_id, ffp_name) VALUES (?, ?, ?)', [ffp_id_val, ffn_id_val, ffp_name_val]);
 
         //let rfboc_col = Object.keys(data.recommended_food_based_on_calories).join(", ").replaceAll("(", "").replaceAll(")", "");
-        let rfboc_val = Object.values(data.recommended_food_based_on_calories).filter((_, index) => index !== 10); // ignore rfboc_id because auto increment (not unique)
+        let rfboc_val = Object.values(data.recommended_food_based_on_calories);
         await pool.query(
             `INSERT INTO recommended_food_based_on_calories 
              (
                 rfboc_activity_level, rfboc_age, rfboc_bmi, rfboc_bmr, 
                 rfboc_created_at, rfboc_daily_calorie_needs, rfboc_diet_type, 
-                rfboc_gender, rfboc_height_cm, rfboc_history_of_gastritis_or_gerd, 
+                rfboc_gender, rfboc_height_cm, rfboc_history_of_gastritis_or_gerd, rfboc_id, 
                 rfboc_ideal_bmi, rfboc_ideal_weight, rfboc_meal_schedule_day, 
                 rfboc_total_calories_by_recommendation, rfboc_total_carbohydrate_g, 
                 rfboc_total_cholesterol_mg, rfboc_total_fat_g, rfboc_total_fiber_g, 
@@ -170,7 +160,7 @@ const proxyPredict = async (request, h) => {
                 rfboc_weight_difference, user_id
              ) 
              VALUES 
-             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
              rfboc_val
           );
         //let rfp_col = Object.keys(data.recommended_food_preference).join(", ").replaceAll("(", "").replaceAll(")", "");
@@ -194,8 +184,6 @@ const proxyPredict = async (request, h) => {
                 console.error(`Gagal memasukkan data ke-${i + 1}:`, error);
             }
         }
-        // await pool.query('INSERT INTO history_recommendation_food_per_day (...) VALUES (?)', Object.values(history_recommendation_food_per_day));
-        // await pool.query('INSERT INTO history_food_recommendation (...) VALUES (?)', Object.values(history_food_recommendation));
 
         return h.response(response.data).code(response.status);
     } catch (error) {
@@ -204,150 +192,9 @@ const proxyPredict = async (request, h) => {
     }
 }
 
-const getAllBooksModule = (request, h) => {
-    const { name, reading, finished } = request.query;
-
-    let filteredBooks = books;
-
-    if (name) {
-        filteredBooks = filteredBooks.filter((book) =>
-            book.name.toLowerCase().includes(name.toLowerCase())
-        );
-    }
-
-    if (reading !== undefined) {
-        const isReading = reading === '1';
-        filteredBooks = filteredBooks.filter((book) => book.reading === isReading);
-    }
-
-    if (finished !== undefined) {
-        const isFinished = finished === '1';
-        filteredBooks = filteredBooks.filter((book) => book.finished === isFinished);
-    }
-
-    const booksToReturn = filteredBooks.map(({ id, name, publisher }) => ({
-        id, name, publisher
-    }));
-
-    const response = h.response({
-        status: 'success',
-        data: {
-            books: booksToReturn,
-        },
-    });
-    response.code(200);
-    return response;
-};
-
-const getBookByIdModule = (request, h) => {
-    const { id } = request.params;
-
-    const book = books.filter((n) => n.id === id)[0];
-    if (book !== undefined) {
-        return {
-            status: 'success',
-            data: {
-            book,
-            },
-        };
-    }
-    const response = h.response({
-        status: 'fail',
-        message: 'Buku tidak ditemukan',
-    });
-    response.code(404);
-    return response;
-};
-
-const editBookByIdModule = (request, h) => {
-    const { id } = request.params;
-
-    const { 
-        name, year, author, summary, publisher,
-        pageCount, readPage, reading
-    } = request.payload;
-
-    const updatedAt = new Date().toISOString();
-    const index = books.findIndex((book) => book.id === id);
-
-    books[index] = {
-        ...books[index],
-        name,
-        year,
-        author,
-        summary,
-        publisher,
-        pageCount,
-        readPage,
-        reading,
-        updatedAt,
-    };
-
-    const isBookEmpty = !name || name.trim() === '';
-
-    if (index === -1) {
-        const response = h.response({
-            status: 'fail',
-            message: 'Gagal memperbarui buku. Id tidak ditemukan',
-        });
-        response.code(404);
-        return response;
-    }
-    if (isBookEmpty){
-        const response = h.response({
-            'status': 'fail',
-            'message': 'Gagal memperbarui buku. Mohon isi nama buku'
-        });
-        response.code(400);
-        return response;
-    }
-    if (readPage > pageCount)
-    {
-        const response = h.response({
-            'status': 'fail',
-            'message': 'Gagal memperbarui buku. readPage tidak boleh lebih besar dari pageCount'
-        });
-        response.code(400);
-        return response;    
-    }
-    const response = h.response({
-        status: 'success',
-        message: 'Buku berhasil diperbarui',
-    });
-    response.code(200);
-    return response;
-};
-
-const deleteBookByIdModule = (request, h) => {
-    const { id } = request.params;
-
-    const index = books.findIndex((book) => book.id === id);
-
-    if (index === -1) {
-        const response = h.response({
-            status: 'fail',
-            message: 'Buku gagal dihapus. Id tidak ditemukan',
-        });
-        response.code(404);
-        return response;
-    }
-    books.splice(index, 1);
-    const response = h.response({
-    status: 'success',
-    message: 'Buku berhasil dihapus',
-    });
-    response.code(200);
-    return response;
-};
-
 module.exports = { 
-    queryTable, 
-    getAllBooksModule, 
-    getBookByIdModule, 
-    editBookByIdModule,
-    deleteBookByIdModule,
     registerUser,
     loginUser,
     updateUser,
-    proxyPredict,
+    predict,
 };
