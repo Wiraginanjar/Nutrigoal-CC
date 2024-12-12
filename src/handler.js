@@ -130,7 +130,7 @@ const predict = async (request, h) => {
 
     try {
         // Mengirim body tersebut ke API tujuan
-        const response = await axios.post('https://model-nutrigoal-usbd2ygyiq-as.a.run.app/predictjson', body);
+        const response = await axios.post('https://nutrigoal-ml-1024521178030.asia-southeast2.run.app/predictjson', body);
 
         // Mengembalikan response dari API tujuan
         let data = response.data;
