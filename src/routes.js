@@ -2,7 +2,8 @@ const {
   registerUser,
   loginUser,
   updateUser,
-  predict,
+  getpredict,
+  getHistory
 } = require('./handler');
 
 const routes = [
@@ -24,7 +25,12 @@ const routes = [
   {
     method: 'POST',
     path: '/predict',
-    handler: predict,
+    handler: getpredict,
+  },
+  {
+    method: 'GET',
+    path: '/history',
+    handler: getHistory,
   },
 ];
   
