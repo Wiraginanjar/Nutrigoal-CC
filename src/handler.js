@@ -1,8 +1,7 @@
 const pool = require('./database');
-const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
-const { storeData, getData } = require('./storeData');
+const { getallData, getDataById } = require('./storeData');
 
 const registerUser = async (request, h) => {
     const { name, email, password } = request.payload;
@@ -136,8 +135,56 @@ const getpredict = async (request, h) => {
 
         // Mengembalikan response dari API tujuan
         let data = response.data;
-        const id = crypto.randomUUID();
-        await storeData(id, data);
+        
+        let ffn_name_val = JSON.stringify(data.favorite_food_name.ffn_name);
+        let ffns_id_val = JSON.stringify(data.favorite_food_name.ffn_id);
+        await pool.query('INSERT INTO favorite_food_name (ffn_id, ffn_name) VALUES (?,?)', [ffns_id_val, ffn_name_val]);
+
+        let ffp_id_val = JSON.stringify(data.favorite_food_preference.ffp_id);
+        let ffn_id_val = JSON.stringify(data.favorite_food_preference.ffn_id);
+        let ffp_name_val = JSON.stringify(data.favorite_food_preference.ffp_name);
+        await pool.query('INSERT INTO favorite_food_preference (ffp_id, ffn_id, ffp_name) VALUES (?, ?, ?)', [ffp_id_val, ffn_id_val, ffp_name_val]);
+
+        //let rfboc_col = Object.keys(data.recommended_food_based_on_calories).join(", ").replaceAll("(", "").replaceAll(")", "");
+        let rfboc_val = Object.values(data.recommended_food_based_on_calories);
+        await pool.query(
+            `INSERT INTO recommended_food_based_on_calories 
+             (
+                rfboc_activity_level, rfboc_age, rfboc_bmi, rfboc_bmr, 
+                rfboc_created_at, rfboc_daily_calorie_needs, rfboc_diet_type, 
+                rfboc_gender, rfboc_height_cm, rfboc_history_of_gastritis_or_gerd, rfboc_id, 
+                rfboc_ideal_bmi, rfboc_ideal_weight, rfboc_meal_schedule_day, 
+                rfboc_total_calories_by_recommendation, rfboc_total_carbohydrate_g, 
+                rfboc_total_cholesterol_mg, rfboc_total_fat_g, rfboc_total_fiber_g, 
+                rfboc_total_protein_g, rfboc_total_saturated_fat_g, rfboc_total_sodium_mg, 
+                rfboc_total_sugar_g, rfboc_updated_at, rfboc_weight_kg, 
+                rfboc_weight_difference, user_id
+             ) 
+             VALUES 
+             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             rfboc_val
+          );
+        //let rfp_col = Object.keys(data.recommended_food_preference).join(", ").replaceAll("(", "").replaceAll(")", "");
+        //console.log(rfp_col);
+        let rfp_val = Object.values(data.recommended_food_preference);
+        //console.log(rfp_val.length);
+        //console.log(Object.keys(rfp_val[5]).join(", ").replaceAll("(", "_").replaceAll(")", "").toLowerCase());
+        for (let i = 0; i < rfp_val.length; i++) {
+            try {
+                await pool.query(
+                    `INSERT INTO recommended_food_preference 
+                    (
+                        calories, carbohydrate_g, cholesterol_mg, 
+                        fat_g, fiber_g, name, protein_g, saturated_fat_g, 
+                        sodium_mg, sugar_g, ffp_id, rfboc_id, rfp_created_at, 
+                        rfp_id, rfp_updated_at
+                    ) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, Object.values(rfp_val[i]));
+                    //console.log(`Data ke-${i + 1} berhasil dimasukkan`);
+            } catch (error) {
+                console.error(`Gagal memasukkan data ke-${i + 1}:`, error);
+            }
+        }
 
         return h.response(response.data).code(response.status);
     } catch (error) {
@@ -146,16 +193,25 @@ const getpredict = async (request, h) => {
     }
 }
 
-async function getHistory(request, h) {
+async function getallHistory(request, h) {
     try {
-      const maps = await getData(); 
-      
+      const maps = await getallData(); 
+      return h.response(maps).code(200);
+    } catch (error) {
+      console.error('Error fetching history:', error); // Log the error for debugging
       const response = h.response({
-        status: 'success',
-        data: maps
+        status: 'fail',
+        message: 'Terjadi kesalahan saat mengambil semua riwayat prediksi',
       });
-      response.code(200);
+      response.code(500);
       return response;
+    }
+  }
+async function getbyHistory(request, h) {
+    const { documentId } = request.params;
+    try {
+        const data = await getDataById(documentId);
+      return h.response(data).code(200);
     } catch (error) {
       console.error('Error fetching history:', error); // Log the error for debugging
       const response = h.response({
@@ -172,5 +228,6 @@ module.exports = {
     loginUser,
     updateUser,
     getpredict,
-    getHistory
+    getallHistory,
+    getbyHistory
 };
